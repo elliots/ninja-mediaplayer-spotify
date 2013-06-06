@@ -14,17 +14,17 @@ You can send commands to the player with a payload like this
 ```
 The available commands are :
 
-playTrack(uri)
-jumpTo(second)
-play
-pause
-playPause
-next
-previous
-volumeUp
-volumeDown
-setVolume(volume)
-unmute
+- playTrack(uri)
+- jumpTo(second)
+- play
+- pause
+- playPause
+- next
+- previous
+- volumeUp
+- volumeDown
+- setVolume(volume)
+- unmute
 
 ## License
 
