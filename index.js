@@ -3,9 +3,8 @@ var stream = require('stream');
 var spotify = require('spotify-node-applescript');
 var async = require('async');
 var _ = require('underscore');
-var http = require('http');
-var https = require('https');
-var fs = require('fs');
+var request = require('request');
+var Datauri = require('datauri');
 
 util.inherits(Driver,stream);
 util.inherits(Device,stream);
@@ -21,10 +20,6 @@ function Driver(opts,app) {
 
 }
 
-function WebCamDevice(app) {
-
-}
-
 function Device(app, driver) {
   var self = this;
 
@@ -32,14 +27,9 @@ function Device(app, driver) {
   this.writeable = true;
   this.readable = true;
   this.V = 0;
-  this.D = 240; // display_text, should be speech
+  this.D = 284;
   this.G = 'spotify';
   this.name = 'Spotify - ' + require('os').hostname();
-
-  // Register our webcam subdevice TODO: Cleanup
-
-  this._coverDevice = new CoverDevice(app);
-  driver.emit('register', this._coverDevice);
 
   function queueUpdate() {
     setTimeout(function() {
@@ -50,6 +40,44 @@ function Device(app, driver) {
   queueUpdate();
 }
 
+function getArtwork(id, cb) {
+  //id = id.substring(id.lastIndexOf(':') + 1);
+
+  console.log('id', id);
+  console.log('http://open.spotify.com/track/' + id);
+
+  /*request('http://open.spotify.com/track/' + id, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      //console.log('body', body);
+      var url = body.match(/(http:\/\/o.scdn.co\/300\/[0-9a-f]*)/);
+      console.log('url', url[1]);
+      artwork[id] = url[1];
+      cb(url[1]);
+    } else {
+      console.log('Failed to get spotify artwork', error, response.statusCode);
+      cb('https://d2b1xqaw2ss8na.cloudfront.net/static/img/defaultCoverL.png');
+
+    }
+  });*/
+
+  request('https://embed.spotify.com/?uri=' + id, function(error, response, body) {
+    if (!error && response.statusCode == 200) {
+      //console.log('body', body);
+      var url = body.match(/(http:\/\/o.scdn.co\/300\/[0-9a-f]*)/);
+      console.log('url', url[1]);
+      artwork[id] = url[1];
+      cb(url[1]);
+    } else {
+      console.log('Failed to get spotify artwork', error, response.statusCode);
+      cb('https://d2b1xqaw2ss8na.cloudfront.net/static/img/defaultCoverL.png');
+
+    }
+  });
+
+}
+
+var artwork = {};
+
 Device.prototype.updateState = function(cb) {
   var self = this;
   async.parallel([
@@ -57,24 +85,36 @@ Device.prototype.updateState = function(cb) {
   ], function(err, result) {
       var state = result[0], track = result[1];
 
-      if (!self._data ||
-          !_.isEqual(track, self._data.track) ||
-          state.state != self._data.state.state ||
-          state.volume != self._data.state.volume) {
-        try {
-          if (!self._data || state.track_id != self._data.state.track_id) {
-            self._coverDevice.sendCoverArt();
-          }
-        } catch(e) {
-          console.log('err!!!', err);
-        }
+      if (!state || !track) {
+        cb();
+        return;
+      }
 
+      if (!self._data ||
+        !_.isEqual(track, self._data.track) ||
+        state.state != self._data.state.state ||
+        state.volume != self._data.state.volume) {
+
+        if (!self._data || state.track_id != self._data.state.track_id) {
+
+          if (!artwork[track.id]) {
+            getArtwork(track.id, function(url) {
+              artwork[track.id] = url;
+              self._data.image = url;
+              self.emit('data', self._data);
+            });
+          }
+        }
 
         // Something has changed. Let's emit.
         self._data = {
           state: state,
-          track: track
+          track: track,
+          image: artwork[track.id]
         };
+
+        console.log("Self data now", self._data);
+
         self.emit('data', JSON.parse(JSON.stringify(self._data)));
       }
 
@@ -94,85 +134,5 @@ Device.prototype.write = function(data) {
     }
   }
 };
-
-
-function CoverDevice(app) {
-  this._app = app;
-  this.writeable = true;
-  this.readable = true;
-  this.V = 0;
-  this.D = 1004;
-  this.G = 'spotifycover';
-  this._guid = [this._app.id,this.G,this.V,this.D].join('_');
-  this.name = 'Spotify Cover Art - ' + require('os').hostname();
-
-}
-
-util.inherits(CoverDevice, stream);
-
-CoverDevice.prototype.write = function(data) {
-  // Don't care. We only send when the state changes
-  this.sendCoverArt();
-
-};
-
-CoverDevice.prototype.sendCoverArt = function(id) {
-  var self = this;
-
-  spotify.getArtwork(function(err, artworkFile) {
-    console.log('Got artwork', artworkFile);
-
-      var postOptions = {
-        host:self._app.opts.streamHost,
-        port:self._app.opts.streamPort,
-        path:'/rest/v0/camera/'+self._guid+'/snapshot',
-        method:'POST',
-        headers: {
-          'X-Ninja-Token': self._app.token
-          , 'Content-Type' : 'image/png'
-          , 'Expires' : 'Mon, 3 Jan 2000 12:34:56 GMT'
-          , 'Pragma' : 'no-cache'
-          , 'transfer-encoding' : 'chunked'
-          , 'Connection' : 'keep-alive'
-        }
-      };
-
-      var proto = (self._app.opts.streamPort==443) ? https:http;
-
-      //send a file to the server
-      var fileStream = fs.createReadStream(artworkFile);
-
-      var postReq = proto.request(postOptions,function(postRes) {
-          postRes.on('end',function() {
-            log('Stream Server ended');
-          });
-          postRes.resume();
-      });
-
-      postReq.on('error',function(err) {
-        log('Error sending picture: ');
-        log(err);
-      });
-
-      var lenWrote=0;
-      fileStream.on('data',function(data) {
-        postReq.write(data,'binary');
-        lenWrote+=data.length;
-      });
-
-      fileStream.on('end',function() {
-        postReq.end();
-        log("Image sent %s",lenWrote);
-      });
-      fileStream.resume();
-
-      fileStream.on('error',function(error) {
-        log(error);
-      });
-     // fileStream.end();
-
-  });
-};
-
 
 module.exports = Driver;

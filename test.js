@@ -37,8 +37,8 @@ d.save = function() {
 
 setTimeout(function() {
     console.log('pausing');
-    /*driver.write({
+    driver.write({
         command: 'jumpTo',
         args:10
-    });*/
+    });
 }, 2000);

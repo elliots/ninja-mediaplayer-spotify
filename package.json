@@ -12,6 +12,8 @@
   "dependencies": {
     "underscore": "~1.4.4",
     "async": "~0.2.9",
-    "spotify-node-applescript": "~0.2.1"
+    "spotify-node-applescript": "~0.2.1",
+    "datauri": "~0.2.0",
+    "request": "~2.21.0"
   }
 }
