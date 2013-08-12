@@ -43,9 +43,6 @@ function Device(app, driver) {
 function getArtwork(id, cb) {
   //id = id.substring(id.lastIndexOf(':') + 1);
 
-  console.log('id', id);
-  console.log('http://open.spotify.com/track/' + id);
-
   /*request('http://open.spotify.com/track/' + id, function (error, response, body) {
     if (!error && response.statusCode == 200) {
       //console.log('body', body);
@@ -64,14 +61,15 @@ function getArtwork(id, cb) {
     if (!error && response.statusCode == 200) {
       //console.log('body', body);
       var url = body.match(/(http:\/\/o.scdn.co\/300\/[0-9a-f]*)/);
-      console.log('url', url[1]);
-      artwork[id] = url[1];
-      cb(url[1]);
-    } else {
-      console.log('Failed to get spotify artwork', error, response.statusCode);
-      cb('https://d2b1xqaw2ss8na.cloudfront.net/static/img/defaultCoverL.png');
-
+      if (url && url.length > 1) {
+	console.log('url', url[1]);
+	artwork[id] = url[1];
+	cb(url[1]);
+      }
     }
+
+    console.log('Spotify : Failed to get spotify artwork', error, response.statusCode);
+    cb('https://d2b1xqaw2ss8na.cloudfront.net/static/img/defaultCoverL.png');
   });
 
 }
