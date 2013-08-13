@@ -61,10 +61,14 @@ function getArtwork(id, cb) {
     if (!error && response.statusCode == 200) {
       //console.log('body', body);
       var url = body.match(/(http:\/\/o.scdn.co\/300\/[0-9a-f]*)/);
+      if (!url || url.length < 1) {
+        url = body.match(/data-ca="([^"]+)"/);
+      }
       if (url && url.length > 1) {
-	console.log('url', url[1]);
-	artwork[id] = url[1];
-	cb(url[1]);
+        console.log('url', url[1]);
+        artwork[id] = url[1];
+        cb(url[1]);
+        return;
       }
     }
 
