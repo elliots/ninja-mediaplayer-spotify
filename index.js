@@ -34,7 +34,7 @@ function Device(app, driver) {
   function queueUpdate() {
     setTimeout(function() {
       self.updateState(queueUpdate);
-    }, 300);
+    }, 1000);
   }
 
   queueUpdate();

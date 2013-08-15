@@ -26,6 +26,16 @@ The available commands are :
 - setVolume(volume)
 - unmute
 
+## Changelog
+
+v0.0.3
+
+Bump up the poll interval from 300ms to 1000ms due to crazy CPU usage in the applescript.
+
+v0.0.2
+
+Grab the cover art url another way...
+
 ## License
 
 Copyright (C) 2013 Ninja Blocks Inc
