@@ -14,7 +14,7 @@ var log = console.log;
 function Driver(opts,app) {
   var self = this;
 
-  app.on('client::up',function(){
+  app.once('client::up',function(){
     self.emit('register', new Device(app, self));
   });
 

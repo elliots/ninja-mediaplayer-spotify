@@ -28,6 +28,10 @@ The available commands are :
 
 ## Changelog
 
+v0.0.4
+
+Tiny fix to stop the driver being initialised multiple times.
+
 v0.0.3
 
 Bump up the poll interval from 300ms to 1000ms due to crazy CPU usage in the applescript.
